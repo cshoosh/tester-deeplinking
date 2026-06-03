@@ -1,0 +1,6 @@
+.firebase/
+node_modules/
+functions/
+functions/node_modules/
+functions/.yarn/
+.pnp.*

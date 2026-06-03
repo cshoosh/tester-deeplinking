@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "site": "trademakers-app-qa",
+    "public": "public",
+    "ignore": [
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

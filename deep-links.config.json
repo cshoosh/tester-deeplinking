@@ -1,0 +1,143 @@
+{
+  "appName": "Trade App",
+  "environments": [
+    {
+      "key": "sit",
+      "label": "SIT",
+      "schemeEnabled": true,
+      "schemeHost": "tradeapp",
+      "schemePrefix": "tradeapp",
+      "webHost": "accstorefront.crre-fletcherb1-s3-public.model-t.cc.commerce.ondemand.com",
+      "webBasePath": "/tradeapp",
+      "notes": "Use for QA unless a test case explicitly says otherwise."
+    },
+    {
+      "key": "uat",
+      "label": "UAT",
+      "schemeEnabled": true,
+      "schemeHost": "tradeapp",
+      "schemePrefix": "tradeapp",
+      "webHost": "accstorefront.crre-fletcherb1-s3-public.model-t.cc.commerce.ondemand.com",
+      "webBasePath": "/tradeapp",
+      "notes": "Same routing format as SIT."
+    },
+    {
+      "key": "prod",
+      "label": "PROD",
+      "schemeEnabled": false,
+      "webHost": "www.placemakers.co.nz",
+      "webBasePath": "/tradeapp",
+      "notes": "Use the production HTTPS route only."
+    }
+  ],
+  "routes": [
+    {
+      "key": "dashboard",
+      "label": "Dashboard",
+      "description": "Main dashboard",
+      "pathTemplate": ""
+    },
+    {
+      "key": "orders",
+      "label": "Order list view",
+      "description": "Orders list",
+      "pathTemplate": "/orders"
+    },
+    {
+      "key": "order-details",
+      "label": "Order details",
+      "description": "Order details",
+      "pathTemplate": "/orders/{orderId}",
+      "params": [
+        {
+          "key": "orderId",
+          "label": "Order ID",
+          "placeholder": "123456",
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "quotes",
+      "label": "Quotes list",
+      "description": "Quotes landing",
+      "pathTemplate": "/quotes"
+    },
+    {
+      "key": "quote-details",
+      "label": "Quote details",
+      "description": "Quote details",
+      "pathTemplate": "/quotes/{quoteCode}",
+      "params": [
+        {
+          "key": "quoteCode",
+          "label": "Quote Code",
+          "placeholder": "Q-10001",
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "lists",
+      "label": "Lists",
+      "description": "My Lists",
+      "pathTemplate": "/my-lists"
+    },
+    {
+      "key": "barcode-scanner",
+      "label": "Barcode scanner",
+      "description": "Barcode scanner",
+      "pathTemplate": "/barcode-scanner"
+    },
+    {
+      "key": "teams",
+      "label": "Teams",
+      "description": "Team management",
+      "pathTemplate": "/teams"
+    },
+    {
+      "key": "cart",
+      "label": "Cart",
+      "description": "Cart",
+      "pathTemplate": "/cart"
+    },
+    {
+      "key": "notifications",
+      "label": "Notifications",
+      "description": "Notifications",
+      "pathTemplate": "/notifications"
+    },
+    {
+      "key": "profile",
+      "label": "Profile",
+      "description": "Profile selection",
+      "pathTemplate": "/profile"
+    },
+    {
+      "key": "my-profile",
+      "label": "My profile",
+      "description": "Profile selection",
+      "pathTemplate": "/my-profile"
+    },
+    {
+      "key": "product-details",
+      "label": "Product details",
+      "description": "Product details",
+      "pathTemplate": "/c/{category}/p/{sku}",
+      "params": [
+        {
+          "key": "category",
+          "label": "Category",
+          "placeholder": "hardware",
+          "required": true
+        },
+        {
+          "key": "sku",
+          "label": "SKU",
+          "placeholder": "SKU-12345",
+          "required": true
+        }
+      ]
+    }
+  ]
+}
