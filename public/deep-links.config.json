@@ -58,6 +58,34 @@
       ]
     },
     {
+      "key": "order-messages",
+      "label": "Order management messages",
+      "description": "Order details with Messages tab selected",
+      "pathTemplate": "/orders/{orderId}?tab=messages",
+      "params": [
+        {
+          "key": "orderId",
+          "label": "Order ID",
+          "placeholder": "123456",
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "reorder",
+      "label": "Re-order",
+      "description": "Start a re-order flow from an order number",
+      "pathTemplate": "/reorder/{orderNumber}",
+      "params": [
+        {
+          "key": "orderNumber",
+          "label": "Order Number",
+          "placeholder": "1000123456",
+          "required": true
+        }
+      ]
+    },
+    {
       "key": "quotes",
       "label": "Quotes list",
       "description": "Quotes landing",
@@ -120,17 +148,25 @@
       "pathTemplate": "/my-profile"
     },
     {
-      "key": "product-details",
-      "label": "Product details",
-      "description": "Product details",
-      "pathTemplate": "/c/{category}/p/{sku}",
+      "key": "shop-category",
+      "label": "Shop category",
+      "description": "Category browsing screen",
+      "pathTemplate": "/c/{category}",
       "params": [
         {
           "key": "category",
           "label": "Category",
           "placeholder": "hardware",
           "required": true
-        },
+        }
+      ]
+    },
+    {
+      "key": "product-details",
+      "label": "Product details",
+      "description": "Product details",
+      "pathTemplate": "/p/{sku}",
+      "params": [
         {
           "key": "sku",
           "label": "SKU",
