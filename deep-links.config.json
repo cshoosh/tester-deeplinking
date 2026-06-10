@@ -94,13 +94,13 @@
     {
       "key": "quote-details",
       "label": "Quote details",
-      "description": "Quote details",
+      "description": "Quote details by quote code",
       "pathTemplate": "/quotes/{quoteCode}",
       "params": [
         {
           "key": "quoteCode",
           "label": "Quote Code",
-          "placeholder": "Q-10001",
+          "placeholder": "Enter the quote code",
           "required": true
         }
       ]
@@ -136,16 +136,48 @@
       "pathTemplate": "/notifications"
     },
     {
+      "key": "notifications-messages",
+      "label": "Notifications messages",
+      "description": "Notifications screen with Messages tab selected",
+      "pathTemplate": "/notifications?tab=messages"
+    },
+    {
+      "key": "notifications-inbox",
+      "label": "Notifications inbox",
+      "description": "Notifications screen with Inbox tab selected",
+      "pathTemplate": "/notifications?tab=inbox"
+    },
+    {
+      "key": "plus-dashboard",
+      "label": "Loyalty dashboard",
+      "description": "Loyalty dashboard",
+      "pathTemplate": "/plus-dashboard"
+    },
+    {
+      "key": "plus-dashboard-experiences",
+      "label": "Loyalty experiences",
+      "description": "Loyalty dashboard with experiences tab selected",
+      "pathTemplate": "/plus-dashboard?tab=experiences"
+    },
+    {
+      "key": "plus-dashboard-experience",
+      "label": "Loyalty experience",
+      "description": "Specific loyalty experience",
+      "pathTemplate": "/plus-dashboard/experience/{experienceId}",
+      "params": [
+        {
+          "key": "experienceId",
+          "label": "Experience ID",
+          "placeholder": "12345",
+          "required": true
+        }
+      ]
+    },
+    {
       "key": "profile",
       "label": "Profile",
       "description": "Profile selection",
       "pathTemplate": "/profile"
-    },
-    {
-      "key": "my-profile",
-      "label": "My profile",
-      "description": "Profile selection",
-      "pathTemplate": "/my-profile"
     },
     {
       "key": "shop-category",
@@ -164,13 +196,27 @@
     {
       "key": "product-details",
       "label": "Product details",
-      "description": "Product details",
+      "description": "Product details by SKU",
       "pathTemplate": "/p/{sku}",
       "params": [
         {
           "key": "sku",
           "label": "SKU",
-          "placeholder": "SKU-12345",
+          "placeholder": "Enter the product sku",
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "list-details",
+      "label": "List details",
+      "description": "Specific list details",
+      "pathTemplate": "/my-lists/{listName}",
+      "params": [
+        {
+          "key": "listName",
+          "label": "List Name",
+          "placeholder": "demo-list",
           "required": true
         }
       ]

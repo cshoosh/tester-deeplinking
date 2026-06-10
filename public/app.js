@@ -43,6 +43,13 @@
     }, {});
   }
 
+  function buildPreviewParamState(route) {
+    return (route.params || []).reduce((acc, param) => {
+      acc[param.key] = param.previewPlaceholder || param.placeholder || `[${param.key}]`;
+      return acc;
+    }, {});
+  }
+
   function getMissingRequiredParams(route, params) {
     return (route.params || [])
       .filter((param) => param.required && String(params[param.key] || '').trim() === '')
@@ -73,7 +80,7 @@
     return raw.replace(/\{([^}]+)\}/g, (_, key) => {
       const value = params[key];
       if (value !== undefined && String(value).trim() !== '') {
-        return String(value).trim();
+        return String(value).trim().replace(/^\/+/, '');
       }
       return usePlaceholders ? `[${key}]` : '';
     });
@@ -94,6 +101,24 @@
   function buildTargetUrl(environment, route, params) {
     const urls = buildUrls(environment, route, params, false);
     return urls.schemeUrl || urls.webUrl || '';
+  }
+
+  function copyToClipboard(value) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(value);
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return copied ? Promise.resolve() : Promise.reject(new Error('Copy failed'));
   }
 
   function renderParamInputs(route, params) {
@@ -122,7 +147,6 @@
     const selectedRoute = getSelectedRoute();
     const currentParams = buildParamState(selectedRoute);
     const currentMissingParams = getMissingRequiredParams(selectedRoute, currentParams);
-    const selectedPreview = buildUrls(selectedEnvironment, selectedRoute, currentParams, currentMissingParams.length > 0);
     const selectedTargetUrl = buildTargetUrl(selectedEnvironment, selectedRoute, currentParams);
     const selectedMissingAlert = buildMissingParamsAlert(selectedRoute, currentParams);
 
@@ -137,7 +161,7 @@
           <h1>${escapeHtml(config.appName)} deep link tester</h1>
           <p class="lede">
             Generate and launch the exact SIT, UAT, and PROD URLs from the trade app deep link guide.
-            Fill in dynamic values like order IDs, order numbers, quote codes, category IDs, and SKUs before launching.
+            Fill in dynamic values like order IDs, order numbers, quote codes, category IDs, product SKUs, experience IDs, and list names before launching.
           </p>
 
           <form class="layout builder" data-live-form>
@@ -176,6 +200,14 @@
                   ? `<button type="button" class="button-secondary" data-error="${escapeHtml(selectedMissingAlert)}">Open selected route</button>`
                   : `<a class="button-secondary" href="${escapeHtml(selectedTargetUrl)}">Open selected route</a>`
               }
+              <button
+                type="button"
+                class="button-secondary"
+                data-copy-url="${escapeHtml(selectedTargetUrl)}"
+                ${selectedMissingAlert ? `data-error="${escapeHtml(selectedMissingAlert)}"` : ''}
+              >
+                Copy url
+              </button>
             </div>
           </form>
 
@@ -236,10 +268,7 @@
         <div class="reference-grid">
           ${config.routes
             .map((route) => {
-              const placeholderParams = (route.params || []).reduce((acc, param) => {
-                acc[param.key] = param.placeholder || `[${param.key}]`;
-                return acc;
-              }, {});
+              const placeholderParams = buildPreviewParamState(route);
               const currentUrls = buildUrls(selectedEnvironment, route, route.key === selectedRoute.key ? currentParams : placeholderParams, route.key === selectedRoute.key ? getMissingRequiredParams(route, currentParams).length > 0 : true);
               const placeholderUrls = config.environments.map((env) => ({
                 environment: env,
@@ -342,6 +371,28 @@
   });
 
   app.addEventListener('click', (event) => {
+    const copyButton = event.target.closest('[data-copy-url]');
+    if (copyButton) {
+      event.preventDefault();
+      if (copyButton.dataset.error) {
+        alert(copyButton.dataset.error);
+        return;
+      }
+
+      copyToClipboard(copyButton.dataset.copyUrl || '')
+        .then(() => {
+          const originalLabel = copyButton.textContent;
+          copyButton.textContent = 'Copied';
+          window.setTimeout(() => {
+            copyButton.textContent = originalLabel;
+          }, 1200);
+        })
+        .catch(() => {
+          alert('Unable to copy the URL.');
+        });
+      return;
+    }
+
     const button = event.target.closest('[data-error]');
     if (!button) return;
     event.preventDefault();

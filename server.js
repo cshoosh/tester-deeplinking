@@ -52,7 +52,7 @@ function resolvePath(route, params, usePlaceholders = false) {
   return raw.replace(/\{([^}]+)\}/g, (_, key) => {
     const value = params[key];
     if (value !== undefined && String(value).trim() !== '') {
-      return String(value).trim();
+      return String(value).trim().replace(/^\/+/, '');
     }
     return usePlaceholders ? `[${key}]` : '';
   });
@@ -86,6 +86,13 @@ function getSelectedRoute(config, routeKey) {
 function buildParamState(route, searchParams) {
   return (route.params || []).reduce((acc, param) => {
     acc[param.key] = searchParams.get(param.key) || '';
+    return acc;
+  }, {});
+}
+
+function buildPreviewParamState(route) {
+  return (route.params || []).reduce((acc, param) => {
+    acc[param.key] = param.previewPlaceholder || param.placeholder || `[${param.key}]`;
     return acc;
   }, {});
 }
@@ -137,10 +144,7 @@ function renderParamInputs(route, params) {
 
 function renderRouteCard(config, route, currentEnvironment, currentParams, activeRouteKey) {
   const routeParams = currentParams || {};
-  const placeholderParams = (route.params || []).reduce((acc, param) => {
-    acc[param.key] = param.placeholder || `[${param.key}]`;
-    return acc;
-  }, {});
+  const placeholderParams = buildPreviewParamState(route);
   const usePlaceholders = getMissingRequiredParams(route, routeParams).length > 0;
   const currentUrls = buildUrls(currentEnvironment, route, routeParams, usePlaceholders);
   const referenceParams = route.key === activeRouteKey ? routeParams : placeholderParams;
@@ -438,7 +442,7 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
             <h1>${escapeHtml(config.appName)} deep link tester</h1>
             <p class="lede">
               Generate and launch the exact SIT, UAT, and PROD URLs from the trade app deep link guide.
-              Fill in dynamic values like order IDs, order numbers, quote codes, category IDs, and SKUs before launching.
+              Fill in dynamic values like order IDs, order numbers, quote codes, category IDs, product SKUs, experience IDs, and list names before launching.
             </p>
 
             <form class="layout builder" action="/" method="get" data-live-form>
@@ -476,13 +480,18 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
               ${renderParamInputs(selectedRoute, currentParams)}
 
               <div class="actions">
+                ${
+                  selectedMissingAlert
+                    ? `<button type="button" class="button-secondary" data-error="${escapeHtml(selectedMissingAlert)}">Open selected route</button>`
+                    : `<a class="button-secondary" href="${escapeHtml(selectedLaunchHref)}">Open selected route</a>`
+                }
                 <button
                   type="button"
                   class="button-secondary"
-                  data-href="${escapeHtml(selectedLaunchHref)}"
+                  data-copy-url="${escapeHtml(selectedLaunchHref)}"
                   ${selectedMissingAlert ? `data-error="${escapeHtml(selectedMissingAlert)}"` : ''}
                 >
-                  Open selected route
+                  Copy url
                 </button>
               </div>
             </form>
@@ -596,7 +605,46 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
           });
         })();
 
+        function copyToClipboard(value) {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            return navigator.clipboard.writeText(value);
+          }
+
+          var textarea = document.createElement('textarea');
+          textarea.value = value;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'fixed';
+          textarea.style.top = '-9999px';
+          textarea.style.left = '-9999px';
+          document.body.appendChild(textarea);
+          textarea.select();
+          var copied = document.execCommand('copy');
+          document.body.removeChild(textarea);
+          return copied ? Promise.resolve() : Promise.reject(new Error('Copy failed'));
+        }
+
         document.addEventListener('click', function (event) {
+          var copyButton = event.target.closest('[data-copy-url]');
+          if (copyButton) {
+            event.preventDefault();
+            if (copyButton.dataset.error) {
+              alert(copyButton.dataset.error);
+              return;
+            }
+            copyToClipboard(copyButton.dataset.copyUrl || '')
+              .then(function () {
+                var originalLabel = copyButton.textContent;
+                copyButton.textContent = 'Copied';
+                window.setTimeout(function () {
+                  copyButton.textContent = originalLabel;
+                }, 1200);
+              })
+              .catch(function () {
+                alert('Unable to copy the URL.');
+              });
+            return;
+          }
+
           var button = event.target.closest('[data-href], [data-error]');
           if (!button) return;
           event.preventDefault();
@@ -641,10 +689,7 @@ function redirect(res, target) {
 function getAllLinks(config) {
   return config.environments.flatMap((environment) =>
     config.routes.map((route) => {
-      const params = (route.params || []).reduce((acc, param) => {
-        acc[param.key] = param.placeholder || `[${param.key}]`;
-        return acc;
-      }, {});
+      const params = buildPreviewParamState(route);
       const urls = buildUrls(environment, route, params, true);
       return {
         environment: environment.label,
