@@ -438,7 +438,7 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
             <h1>${escapeHtml(config.appName)} deep link tester</h1>
             <p class="lede">
               Generate and launch the exact SIT, UAT, and PROD URLs from the trade app deep link guide.
-              Fill in dynamic values like order IDs, order numbers, quote codes, categories, and SKUs before launching.
+              Fill in dynamic values like order IDs, order numbers, quote codes, category IDs, and SKUs before launching.
             </p>
 
             <form class="layout builder" action="/" method="get" data-live-form>

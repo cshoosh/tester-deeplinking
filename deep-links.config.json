@@ -151,11 +151,11 @@
       "key": "shop-category",
       "label": "Shop category",
       "description": "Category browsing screen",
-      "pathTemplate": "/c/{category}",
+      "pathTemplate": "/c/{categoryId}",
       "params": [
         {
-          "key": "category",
-          "label": "Category",
+          "key": "categoryId",
+          "label": "Category ID",
           "placeholder": "hardware",
           "required": true
         }
