@@ -199,7 +199,13 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
       : buildUrls(env, selectedRoute, currentParams, false))
   }));
   const selectedMissingAlert = buildMissingParamsAlert(selectedRoute, currentParams);
-  const selectedLaunchHref = `/open?${toQueryString({ env: selectedEnvironment.key, route: selectedRoute.key, ...currentParams })}`;
+  const selectedTargetUrls = buildUrls(
+    selectedEnvironment,
+    selectedRoute,
+    currentParams,
+    currentMissingParams.length > 0
+  );
+  const selectedCopyUrl = selectedTargetUrls.schemeUrl || selectedTargetUrls.webUrl || '';
 
   const cardsHtml = config.routes
     .map((route) => renderRouteCard(config, route, selectedEnvironment, route === selectedRoute ? currentParams : {}, selectedRoute.key))
@@ -480,16 +486,11 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
               ${renderParamInputs(selectedRoute, currentParams)}
 
               <div class="actions">
-                ${
-                  selectedMissingAlert
-                    ? `<button type="button" class="button-secondary" data-error="${escapeHtml(selectedMissingAlert)}">Open selected route</button>`
-                    : `<a class="button-secondary" href="${escapeHtml(selectedLaunchHref)}">Open selected route</a>`
-                }
+                <button type="submit" class="button-secondary">Open selected route</button>
                 <button
                   type="button"
                   class="button-secondary"
-                  data-copy-url="${escapeHtml(selectedLaunchHref)}"
-                  ${selectedMissingAlert ? `data-error="${escapeHtml(selectedMissingAlert)}"` : ''}
+                  data-copy-url="${escapeHtml(selectedCopyUrl)}"
                 >
                   Copy url
                 </button>
@@ -587,9 +588,34 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
             window.location.search = buildSearchParams();
           }
 
+          function syncWithoutReload() {
+            window.history.replaceState({}, '', '?' + buildSearchParams());
+          }
+
           function syncSoon() {
             window.clearTimeout(timer);
-            timer = window.setTimeout(syncNow, 200);
+            timer = window.setTimeout(syncWithoutReload, 1000);
+          }
+
+          function buildCurrentSearchParams() {
+            var formData = new FormData(form);
+            var params = new URLSearchParams();
+
+            params.set('env', String(formData.get('env') || 'sit'));
+            params.set('route', String(formData.get('route') || 'dashboard'));
+
+            formData.forEach(function (value, key) {
+              if (key === 'env' || key === 'route') return;
+              if (String(value).trim() !== '') {
+                params.set(key, String(value));
+              }
+            });
+
+            return params;
+          }
+
+          function buildCurrentOpenUrl() {
+            return '/open?' + buildCurrentSearchParams().toString();
           }
 
           form.addEventListener('change', function (event) {
@@ -603,6 +629,12 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
               syncSoon();
             }
           });
+
+          form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            window.location.href = buildCurrentOpenUrl();
+          });
+
         })();
 
         function copyToClipboard(value) {
@@ -645,9 +677,12 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
             return;
           }
 
-          var button = event.target.closest('[data-href], [data-error]');
+          var button = event.target.closest('[data-href], [data-error], [data-copy-url]');
           if (!button) return;
           event.preventDefault();
+          if (button.matches('button[type="submit"]')) {
+            return;
+          }
           if (button.dataset.error) {
             alert(button.dataset.error);
             return;

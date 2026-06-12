@@ -130,12 +130,6 @@
       "pathTemplate": "/cart"
     },
     {
-      "key": "notifications",
-      "label": "Notifications",
-      "description": "Notifications",
-      "pathTemplate": "/notifications"
-    },
-    {
       "key": "notifications-messages",
       "label": "Notifications messages",
       "description": "Notifications screen with Messages tab selected",
@@ -160,11 +154,17 @@
       "pathTemplate": "/plus-dashboard?tab=experiences"
     },
     {
-      "key": "plus-dashboard-experience",
-      "label": "Loyalty experience",
-      "description": "Specific loyalty experience",
-      "pathTemplate": "/plus-dashboard/experience/{experienceId}",
+      "key": "plus-dashboard-experience-program",
+      "label": "Loyalty experience program",
+      "description": "Specific loyalty experience program",
+      "pathTemplate": "/plus-dashboard/experience/{programId}/{experienceId}",
       "params": [
+        {
+          "key": "programId",
+          "label": "Program ID",
+          "placeholder": "67890",
+          "required": true
+        },
         {
           "key": "experienceId",
           "label": "Experience ID",
@@ -220,6 +220,12 @@
           "required": true
         }
       ]
+    },
+    {
+      "key": "risk-management-hub-pre-work",
+      "label": "Risk management pre-work",
+      "description": "Risk management hub pre-work",
+      "pathTemplate": "/risk-management-hub/pre-work"
     }
   ]
 }

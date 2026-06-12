@@ -121,6 +121,41 @@
     return copied ? Promise.resolve() : Promise.reject(new Error('Copy failed'));
   }
 
+  function captureFocusedField() {
+    const activeElement = document.activeElement;
+    if (!activeElement || !app.contains(activeElement) || !activeElement.name) {
+      return null;
+    }
+
+    return {
+      name: activeElement.name,
+      selectionStart: typeof activeElement.selectionStart === 'number' ? activeElement.selectionStart : null,
+      selectionEnd: typeof activeElement.selectionEnd === 'number' ? activeElement.selectionEnd : null,
+      value: activeElement.value
+    };
+  }
+
+  function restoreFocusedField(snapshot) {
+    if (!snapshot) {
+      return;
+    }
+
+    const nextElement = Array.from(app.querySelectorAll('[name]')).find((element) => element.name === snapshot.name);
+    if (!nextElement || typeof nextElement.focus !== 'function') {
+      return;
+    }
+
+    nextElement.focus({ preventScroll: true });
+    if (
+      typeof nextElement.setSelectionRange === 'function' &&
+      snapshot.selectionStart !== null &&
+      snapshot.selectionEnd !== null &&
+      nextElement.value === snapshot.value
+    ) {
+      nextElement.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd);
+    }
+  }
+
   function renderParamInputs(route, params) {
     if (!route.params || route.params.length === 0) {
       return '<p class="hint">This route does not require additional input.</p>';
@@ -143,6 +178,7 @@
   }
 
   function render() {
+    const focusedField = captureFocusedField();
     const selectedEnvironment = getSelectedEnvironment();
     const selectedRoute = getSelectedRoute();
     const currentParams = buildParamState(selectedRoute);
@@ -195,11 +231,7 @@
             ${renderParamInputs(selectedRoute, currentParams)}
 
             <div class="actions">
-              ${
-                selectedMissingAlert
-                  ? `<button type="button" class="button-secondary" data-error="${escapeHtml(selectedMissingAlert)}">Open selected route</button>`
-                  : `<a class="button-secondary" href="${escapeHtml(selectedTargetUrl)}">Open selected route</a>`
-              }
+              <button type="submit" class="button-secondary">Open selected route</button>
               <button
                 type="button"
                 class="button-secondary"
@@ -312,11 +344,7 @@
         </div>
       </section>
     `;
-    window.history.replaceState({}, '', `?${new URLSearchParams({
-      env: state.envKey,
-      route: state.routeKey,
-      ...Object.fromEntries(Object.entries(state.params).filter(([, value]) => String(value).trim() !== ''))
-    }).toString()}`);
+    restoreFocusedField(focusedField);
   }
 
   function syncFromState() {
@@ -338,7 +366,7 @@
     timer = window.setTimeout(() => {
       syncFromState();
       render();
-    }, 150);
+    }, 1000);
   }
 
   app.addEventListener('change', (event) => {
@@ -368,6 +396,26 @@
     }
     state.params[target.name] = target.value;
     scheduleRender();
+  });
+
+  app.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!form || !form.matches || !form.matches('[data-live-form]')) {
+      return;
+    }
+
+    event.preventDefault();
+    const selectedEnvironment = getSelectedEnvironment();
+    const selectedRoute = getSelectedRoute();
+    const currentParams = buildParamState(selectedRoute);
+    const selectedMissingAlert = buildMissingParamsAlert(selectedRoute, currentParams);
+
+    if (selectedMissingAlert) {
+      alert(selectedMissingAlert);
+      return;
+    }
+
+    window.location.href = buildTargetUrl(selectedEnvironment, selectedRoute, currentParams);
   });
 
   app.addEventListener('click', (event) => {
