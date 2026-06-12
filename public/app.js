@@ -103,11 +103,39 @@
     return urls.schemeUrl || urls.webUrl || '';
   }
 
-  function copyToClipboard(value) {
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-      return navigator.clipboard.writeText(value);
+  function readLiveFormState(form) {
+    const formData = new FormData(form);
+    const envKey = String(formData.get('env') || 'sit');
+    const routeKey = String(formData.get('route') || 'dashboard');
+    const params = {};
+
+    formData.forEach((value, key) => {
+      if (key === 'env' || key === 'route') {
+        return;
+      }
+      params[key] = String(value);
+    });
+
+    return { envKey, routeKey, params };
+  }
+
+  function buildLiveCopyUrl(form) {
+    const liveState = readLiveFormState(form);
+    const environment = config.environments.find((env) => env.key === liveState.envKey) || config.environments[0];
+    const route = config.routes.find((item) => item.key === liveState.routeKey) || config.routes[0];
+    const currentParams = (route.params || []).reduce((acc, param) => {
+      acc[param.key] = liveState.params[param.key] || '';
+      return acc;
+    }, {});
+    const selectedMissingAlert = buildMissingParamsAlert(route, currentParams);
+    if (selectedMissingAlert) {
+      return { error: selectedMissingAlert, url: '' };
     }
 
+    return { error: '', url: buildTargetUrl(environment, route, currentParams) };
+  }
+
+  function copyToClipboard(value) {
     const textarea = document.createElement('textarea');
     textarea.value = value;
     textarea.setAttribute('readonly', '');
@@ -116,9 +144,23 @@
     textarea.style.left = '-9999px';
     document.body.appendChild(textarea);
     textarea.select();
-    const copied = document.execCommand('copy');
+    let copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } catch (error) {
+      copied = false;
+    }
     document.body.removeChild(textarea);
-    return copied ? Promise.resolve() : Promise.reject(new Error('Copy failed'));
+    if (copied) {
+      return Promise.resolve();
+    }
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(value);
+    }
+
+    window.prompt('Copy this URL', value);
+    return Promise.resolve();
   }
 
   function captureFocusedField() {
@@ -422,12 +464,34 @@
     const copyButton = event.target.closest('[data-copy-url]');
     if (copyButton) {
       event.preventDefault();
-      if (copyButton.dataset.error) {
-        alert(copyButton.dataset.error);
+      event.stopImmediatePropagation();
+      const form = document.querySelector('[data-live-form]');
+      if (!form) {
+        if (copyButton.dataset.error) {
+          alert(copyButton.dataset.error);
+          return;
+        }
+        copyToClipboard(copyButton.dataset.copyUrl || '')
+          .then(() => {
+            const originalLabel = copyButton.textContent;
+            copyButton.textContent = 'Copied';
+            window.setTimeout(() => {
+              copyButton.textContent = originalLabel;
+            }, 1200);
+          })
+          .catch(() => {
+            alert('Unable to copy the URL.');
+          });
         return;
       }
 
-      copyToClipboard(copyButton.dataset.copyUrl || '')
+      const liveCopy = buildLiveCopyUrl(form);
+      if (liveCopy.error) {
+        alert(liveCopy.error);
+        return;
+      }
+
+      copyToClipboard(liveCopy.url || copyButton.dataset.copyUrl || '')
         .then(() => {
           const originalLabel = copyButton.textContent;
           copyButton.textContent = 'Copied';

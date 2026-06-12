@@ -188,6 +188,7 @@ function renderRouteCard(config, route, currentEnvironment, currentParams, activ
 }
 
 function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
+  const clientConfigJson = JSON.stringify(config).replace(/</g, '\\u003c');
   const selectedEnvironment = getSelectedEnvironment(config, selectedEnvKey);
   const selectedRoute = getSelectedRoute(config, selectedRouteKey);
   const currentParams = buildParamState(selectedRoute, requestUrl.searchParams);
@@ -561,6 +562,9 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
         </section>
       </main>
       <script>
+        var deepLinkConfig = ${clientConfigJson};
+      </script>
+      <script>
         (function () {
           var form = document.querySelector('[data-live-form]');
           if (!form) return;
@@ -618,6 +622,106 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
             return '/open?' + buildCurrentSearchParams().toString();
           }
 
+          function getSelectedEnvironment(envKey) {
+            return deepLinkConfig.environments.find(function (env) {
+              return env.key === envKey;
+            }) || deepLinkConfig.environments[0];
+          }
+
+          function getSelectedRoute(routeKey) {
+            return deepLinkConfig.routes.find(function (route) {
+              return route.key === routeKey;
+            }) || deepLinkConfig.routes[0];
+          }
+
+          function buildParamState(route, searchParams) {
+            return (route.params || []).reduce(function (acc, param) {
+              acc[param.key] = searchParams.get(param.key) || '';
+              return acc;
+            }, {});
+          }
+
+          function normalizeSuffix(value) {
+            if (!value) {
+              return '';
+            }
+            var suffix = value.charAt(0) === '/' ? value : '/' + value;
+            return suffix === '/' ? '' : suffix;
+          }
+
+          function resolvePath(route, params) {
+            var raw = route.pathTemplate || '';
+            return raw.replace(/\{([^}]+)\}/g, function (_, key) {
+              var value = params[key];
+              if (value !== undefined && String(value).trim() !== '') {
+                return String(value).trim().replace(/^\\/+/, '');
+              }
+              return '';
+            });
+          }
+
+          function buildUrls(environment, route, params) {
+            var pathSuffix = normalizeSuffix(resolvePath(route, params));
+            var webBasePath = normalizeSuffix(environment.webBasePath || '/tradeapp');
+            var webHost = environment.webHost;
+            var schemeEnabled = environment.schemeEnabled !== false;
+            var schemePrefix = environment.schemePrefix || 'tradeapp';
+            var schemeHost = environment.schemeHost || 'tradeapp';
+            var webUrl = webHost ? 'https://' + webHost + webBasePath + pathSuffix : '';
+            var schemeUrl = schemeEnabled && schemeHost ? schemePrefix + '://' + schemeHost + pathSuffix : '';
+            return { webUrl: webUrl, schemeUrl: schemeUrl };
+          }
+
+          function buildMissingRequiredParams(route, params) {
+            return (route.params || [])
+              .filter(function (param) {
+                return param.required && String(params[param.key] || '').trim() === '';
+              })
+              .map(function (param) {
+                return param.key;
+              });
+          }
+
+          function buildMissingParamsAlert(route, params) {
+            var missing = buildMissingRequiredParams(route, params);
+            if (missing.length === 0) {
+              return '';
+            }
+
+            var labels = (route.params || [])
+              .filter(function (param) {
+                return missing.indexOf(param.key) !== -1;
+              })
+              .map(function (param) {
+                return param.label || param.key;
+              });
+
+            return 'Please enter: ' + labels.join(', ') + '.';
+          }
+
+          function buildCurrentCopyUrl() {
+            var liveFormData = new FormData(form);
+            var liveEnvKey = String(liveFormData.get('env') || 'sit');
+            var liveRouteKey = String(liveFormData.get('route') || 'dashboard');
+            var liveCurrentParams = {};
+
+            liveFormData.forEach(function (value, key) {
+              if (key === 'env' || key === 'route') return;
+              liveCurrentParams[key] = String(value);
+            });
+
+            var liveEnvironment = getSelectedEnvironment(liveEnvKey);
+            var liveRoute = getSelectedRoute(liveRouteKey);
+
+            var missing = buildMissingRequiredParams(liveRoute, liveCurrentParams);
+            if (missing.length > 0) {
+              return { error: buildMissingParamsAlert(liveRoute, liveCurrentParams), url: '' };
+            }
+
+            var liveUrls = buildUrls(liveEnvironment, liveRoute, liveCurrentParams);
+            return { error: '', url: liveUrls.schemeUrl || liveUrls.webUrl || '' };
+          }
+
           form.addEventListener('change', function (event) {
             if (event.target && (event.target.name === 'env' || event.target.name === 'route')) {
               syncNow();
@@ -635,13 +739,49 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
             window.location.href = buildCurrentOpenUrl();
           });
 
+          document.addEventListener('click', function (event) {
+            var copyButton = event.target.closest('[data-copy-url]');
+            if (copyButton) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              var liveCopy = buildCurrentCopyUrl();
+              if (liveCopy.error) {
+                alert(liveCopy.error);
+                return;
+              }
+
+              copyToClipboard(liveCopy.url || copyButton.dataset.copyUrl || '')
+                .then(function () {
+                  var originalLabel = copyButton.textContent;
+                  copyButton.textContent = 'Copied';
+                  window.setTimeout(function () {
+                    copyButton.textContent = originalLabel;
+                  }, 1200);
+                })
+                .catch(function () {
+                  alert('Unable to copy the URL.');
+                });
+              return;
+            }
+
+            var button = event.target.closest('[data-href], [data-error], [data-copy-url]');
+            if (!button) return;
+            event.preventDefault();
+            if (button.matches('button[type="submit"]')) {
+              return;
+            }
+            if (button.dataset.error) {
+              alert(button.dataset.error);
+              return;
+            }
+            if (button.dataset.href) {
+              window.location.href = button.dataset.href;
+            }
+          });
+
         })();
 
         function copyToClipboard(value) {
-          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-            return navigator.clipboard.writeText(value);
-          }
-
           var textarea = document.createElement('textarea');
           textarea.value = value;
           textarea.setAttribute('readonly', '');
@@ -650,47 +790,25 @@ function renderPage(config, requestUrl, selectedEnvKey, selectedRouteKey) {
           textarea.style.left = '-9999px';
           document.body.appendChild(textarea);
           textarea.select();
-          var copied = document.execCommand('copy');
+          var copied = false;
+          try {
+            copied = document.execCommand('copy');
+          } catch (error) {
+            copied = false;
+          }
           document.body.removeChild(textarea);
-          return copied ? Promise.resolve() : Promise.reject(new Error('Copy failed'));
+          if (copied) {
+            return Promise.resolve();
+          }
+
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            return navigator.clipboard.writeText(value);
+          }
+
+          window.prompt('Copy this URL', value);
+          return Promise.resolve();
         }
 
-        document.addEventListener('click', function (event) {
-          var copyButton = event.target.closest('[data-copy-url]');
-          if (copyButton) {
-            event.preventDefault();
-            if (copyButton.dataset.error) {
-              alert(copyButton.dataset.error);
-              return;
-            }
-            copyToClipboard(copyButton.dataset.copyUrl || '')
-              .then(function () {
-                var originalLabel = copyButton.textContent;
-                copyButton.textContent = 'Copied';
-                window.setTimeout(function () {
-                  copyButton.textContent = originalLabel;
-                }, 1200);
-              })
-              .catch(function () {
-                alert('Unable to copy the URL.');
-              });
-            return;
-          }
-
-          var button = event.target.closest('[data-href], [data-error], [data-copy-url]');
-          if (!button) return;
-          event.preventDefault();
-          if (button.matches('button[type="submit"]')) {
-            return;
-          }
-          if (button.dataset.error) {
-            alert(button.dataset.error);
-            return;
-          }
-          if (button.dataset.href) {
-            window.location.href = button.dataset.href;
-          }
-        });
       </script>
     </body>
   </html>`;
