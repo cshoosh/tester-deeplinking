@@ -26,7 +26,7 @@
       "label": "PROD",
       "schemeEnabled": false,
       "webHost": "www.placemakers.co.nz",
-      "webBasePath": "/tradeapp",
+      "webBasePath": "/redirect",
       "notes": "Use the production HTTPS route only."
     }
   ],

@@ -36,5 +36,5 @@ PORT=4000 DEEPLINK_SCHEME=tradeapp DEEPLINK_SIT_WEB_HOST=staging.example.com DEE
 
 - `Launch` redirects to the selected environment and route.
 - SIT and UAT use the `tradeapp://tradeapp/...` format from the guide.
-- PROD uses `https://www.placemakers.co.nz/tradeapp/...` and does not show a custom-scheme launch.
+- PROD uses the `/redirect` web base path on `https://www.placemakers.co.nz` and does not show a custom-scheme launch.
 - Routes with variables such as order ID, order number, quote code, category ID, and SKU are editable in the top launcher form.
